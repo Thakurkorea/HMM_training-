@@ -1,0 +1,163 @@
+
+clc
+clear all
+tic
+% parpool('local')
+% video = VideoWriter('yourvideo.avi'); %create the video object
+% open(video); %open the file for writing
+% for ii=1:82 %where N is the number of images
+% %   I = imread('ani_%d_level_%s.png', i,); %read the next image
+%     I = imread([num2str(ii),'.jpg']);
+%     writeVideo(video,I); %write the image to file
+% end
+% close(video); %close the file
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%Hmm
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% guessTR=[0.675	0.325
+% 0.041	0.959];
+% guessEM=[0.000	0.902	0.000	0.021	0.076	0.000
+% 0.872	0.052	0.000	0.000	0.068	0.008];
+% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% %%%% iteration for progarm
+% [estTR,estE] = hmmtrain(seq1',guessTR,guessEM);
+% [estTR,estE]
+% likelystates = hmmviterbi(seq1',estTR,estE);
+% score_1=sum(states==likelystates)/length(seq1)*100
+%
+
+% df=readmatrix('transition_matrix_kstest.xlsx','Sheet','compwithall');
+df=readmatrix('#67,68,05 four ind hmm.xlsx','Sheet','Sequences');
+data_shape=size(df);
+%% simulation parameters 
+itr=10;
+no_of_states=3;
+no_of_events=6;
+% Parameters=zeros([no_of_states,(no_of_states+no_of_events)]);
+Parameters=[];
+% for i=1:data_shape(2)
+% sequece=df(:,i); % all
+seq_68br=df(:,1); % #68 brooding season
+seq_67br=df(:,2); % #67 brooding season
+seq_67pr=df(:,3); % #67 pregnancy season
+seq_05pr=df(:,4); % #05 pregnancy season
+
+%% delete the nan data
+seq1=rmmissing(seq_68br)';
+seq2=rmmissing(seq_67br)';
+seq3=rmmissing(seq_67pr)';
+seq4=rmmissing(seq_05pr)';
+
+% %%
+% % random transition matris 
+seq_1={seq1,seq2};      % brooding 
+seq_2={seq3,seq4};      % pregnent 
+
+% % checking the model 
+% TPM= [0.02	0.225
+% 0.739	0.261];
+% EPM=[0.108	0.034	0.101	0.014	0.237	0.507
+% 0.752	0.034	0.108	0.068	0.026	0.013];
+% [estTR,estE] = hmmtrain(seq_2,TPM,EPM);
+% if lastwarn()~='Algorithm did not converge with tolerance 1e-06 in 500 iterations.'
+%     Parameters=[Parameters;estTR,estE] 
+% else
+%     disp('nothng to display')
+% end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+
+for t=1:itr
+warning(' ');
+Tr = randi([1, 100], [no_of_states,no_of_states]);
+guessTR=Tr./(sum(Tr,2));
+
+EM = randi([1, 100], [no_of_states,no_of_events]);
+guessEM=EM./(sum(EM,2));
+[estTR,estE,xx] = hmmtrain(seq_1,guessTR,guessEM,'Maxiterations',1000);
+% [estTR,estE] = hmmtrain(seq1',estTR,estE)
+% [estTR,estE] = hmmtrain(seq1',estTR,estE)
+% [estTR,estE] = hmmtrain(seq1',estTR,estE)
+% Parameters(end+1,:)=[estTR,estE]
+if lastwarn()==' '
+    disp('yes')
+    Parameters=[Parameters;[estTR,estE]];
+else
+    disp('no')
+end
+% if lastwarn()~='Algorithm did not converge with tolerance 1e-06 in 1000 iterations.'
+% %     Parameters=[Parameters;[estTR,estE]]
+%      Parameters=[Parameters;[estTR,estE]]
+% end
+
+% Parameters=cat(1,Parameters,[estTR,estE]);
+
+% Parameter=[Parameter,[estTR,estE]]  % if we consider the list objaect 
+end
+% end
+% file_name=[[num2str(no_of_states),'S_',num2str(no_of_events)],'E_10000 preg_withoutwarning.xlsx'];
+% writematrix(Parameters,num2str(file_name));
+% %%%%%%%%%%%%%%%%%%%%%%%%%
+ 
+% estTR=[0.34	0.05	0.61
+% 0	0.94	0.06
+% 0.56	0.08	0.36
+% ];
+% estE=[0.1	0.45	0.08	0.02	0.12	0.23
+% 0.84	0.08	0.01	0	0.07	0
+% 0.2	0.59	0.05	0.05	0.04	0.07
+% ];
+% [estTR,estE] = hmmtrain(seq_1,estTR,estE,'Maxiterations',1000);     % seq2 Pregnanget
+% [estTR,estE]
+% x=[];y=x;  
+% for j =1:1000;
+% sequences=[];
+% states=[];
+% for i=1:20;
+%     [sequences(:,i), states(:,i)] = hmmgenerate(20,estTR,estE);
+% %     [sequences(:,i), states(:,i)] = hmmgenerate(20,TPM,EPM);
+% 
+% end
+% % means = mean(states); % Sample means
+% means = mean(sequences); % Sample means
+% [phat,~] = mle(means);
+% x=[x;phat(1)];
+% y=[y;phat(2)];
+% end
+% [mean(x),mean(y)]
+%%%%%%%%%%%%%%%%%%%%%%5
+
+%%
+%% Generating the Sequence with TPM and EPM
+% estTR=[];
+% estE=[];
+
+
+
+score=[];
+like=[];
+seqn=[];
+for i=1:10000
+[seq1,states] = hmmgenerate(length(seq1),estTR,estE);  % brooding sequence check
+seqn=[seqn;seq1];
+% [seq,states] = hmmgenerate(length(seq3),estTR,estE);  % pregnent sequence check
+
+%% 추정된 행렬의 정확도 점수
+likelystates= hmmviterbi(seq1, estTR,estE);
+like=[like; likelystates];
+score(i,:)=sum(states==likelystates)/length(seq1)*100; % states-시계열로 점수를 계산한다. 
+%score_2=sum(states==likelystates2)/100; % 랜덤사건시퀀스인경우 점수가 매우 낮다. 
+end 
+% a=[mean(score),max(score),min(score)]
+hist(score)
+caption = sprintf(['score(µ=', num2str(round(mean(score),2)),',σ=',num2str(round(std(score),2)),',N=',num2str(length(score)),')']);
+%d, σ=%d  ,N=%d )',i,i,i ]);
+xlabel(caption)
+% length(score),mean(score),std(score)
+ylabel('Frequency')
+set(gcf,'color','w');
+
+toc
+
+
+
