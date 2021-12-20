@@ -1,0 +1,64 @@
+clc
+clear all
+tic
+% df=readmatrix('transition_matrix_kstest.xlsx','Sheet','compwithall');
+df=readmatrix('#67,68,05 four ind hmm.xlsx','Sheet','Sequences');
+data_shape=size(df);
+%% simulation parameters 
+itr=10;
+no_of_states=3;
+no_of_events=6;
+% Parameters=zeros([no_of_states,(no_of_states+no_of_events)]);
+Parameters=[];
+% for i=1:data_shape(2)
+% sequece=df(:,i); % all
+seq_68br=df(:,1); % #68 brooding season
+seq_67br=df(:,2); % #67 brooding season
+seq_67pr=df(:,3); % #67 pregnancy season
+seq_05pr=df(:,4); % #05 pregnancy season
+
+%% delete the nan data
+seq1=rmmissing(seq_68br)'; % #68 brooding season
+seq2=rmmissing(seq_67br)'; %#67 brooding season
+seq3=rmmissing(seq_67pr)'; % #67 pregnancy season
+seq4=rmmissing(seq_05pr)';  % #05 pregnancy season
+
+% %%
+estTR= [0.751	0.248	0.002
+0.219	0.746	0.035
+0.033	0.100	0.867
+];
+estE=[0.749	0.033	0.111	0.072	0.022	0.013
+0.001	0.913	0.002	0.004	0.045	0.035
+0.108	0.034	0.101	0.014	0.237	0.507
+];
+
+seqq=seq2;
+
+score=[];
+like=[];
+seqn=[];
+for i=1:1000
+[seq,states] = hmmgenerate(length(seqq),estTR,estE);  % brooding sequence check
+seqn=[seqn;seq];
+% [seq,states] = hmmgenerate(length(seq3),estTR,estE);  % pregnent sequence check
+
+%% ì¶”ì •ë?œ í–‰ë ¬ì?˜ ì •í™•ë?„ ì ?ìˆ˜
+likelystates= [hmmviterbi(seqq, estTR,estE)];
+like=[like; likelystates];
+score(i,:)=sum(states==likelystates)/length(seqq)*100; % states-ì‹œê³„ì—´ë¡œ ì ?ìˆ˜ë¥¼ ê³„ì‚°í•œë‹¤. 
+%score_2=sum(states==likelystates2)/100; % ëžœë?¤ì‚¬ê±´ì‹œí€€ìŠ¤ì?¸ê²½ìš° ì ?ìˆ˜ê°€ ë§¤ìš° ë‚®ë‹¤. 
+end 
+% a=[mean(score),max(score),min(score)]
+hist(score);
+caption = sprintf(['Score(Mean=', num2str(round(mean(score),2)),',SD=',num2str(round(std(score),2)),',N=',num2str(length(score)),')']);
+%d, Ïƒ=%d  ,N=%d )',i,i,i ]);
+[round(mean(score),2),round(std(score),2),length(score)]
+xlabel(caption)
+% length(score),mean(score),std(score)
+ylabel('Frequency')
+set(gcf,'color','w');
+hold off
+
+
+toc
